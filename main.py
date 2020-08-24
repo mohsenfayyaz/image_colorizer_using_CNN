@@ -9,12 +9,16 @@ from keras_preprocessing.image import ImageDataGenerator
 from DataGenerator import DataGenerator
 from defines import HEIGHT, WIDTH
 from utils import show_image_array, array_to_color_mask
+from skimage import color
+from inception import inception_model
+
 # import tensorflow_datasets as tfds
 
 INPUT_DIRECTORY = "../data/input"
 OUTPUT_DIRECTORY = "../data/w"
-MODEL_FOLDER = "save\\CONV_TRANSPOSE\\"
-LOAD_MODEL_OFFSET = None
+# MODEL_FOLDER = "save\\CONV_TRANSPOSE\\"
+MODEL_FOLDER = "save\\inception3\\"
+LOAD_MODEL_OFFSET = 49
 
 
 def cnn_model():
@@ -31,10 +35,11 @@ def cnn_model():
     model.add(tf.keras.layers.Activation(tf.keras.activations.relu))
     model.add(tf.keras.layers.Conv2DTranspose(32, (8, 8), padding="valid"))
     model.add(tf.keras.layers.Activation(tf.keras.activations.relu))
-    model.add(tf.keras.layers.Conv2DTranspose(3, (4, 4), padding="valid"))
+    model.add(tf.keras.layers.Conv2DTranspose(2, (4, 4), padding="valid"))
     model.add(tf.keras.layers.Activation(tf.keras.activations.relu))
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.005), loss=tf.keras.losses.mean_squared_error,
                   metrics=["accuracy"])
+    print(model.summary())
     return model
 
 
@@ -51,66 +56,70 @@ def get_train(use_saved_npy=True):
     return train_x, train_y
 
 
-def get_model(use_saved=True):
+def get_model(use_saved=True, type="inception"):
     if use_saved:
         return tf.keras.models.load_model(MODEL_FOLDER + 'model_' + str(LOAD_MODEL_OFFSET) + '.h5')
     else:
-        return cnn_model()
+        if type == "inception":
+            return inception_model()
+        else:
+            return cnn_model()
 
 
 global_train_x = None
+global_train_y = None
 
 
 class CustomSaver(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         offset = 0 if LOAD_MODEL_OFFSET is None else LOAD_MODEL_OFFSET + 1
-        show_predict(self.model, global_train_x[0], epoch + offset)
+        show_predict(self.model, global_train_x[64], epoch + offset)
+        show_predict(self.model, global_train_x[50], epoch + offset + 0.1)
         if epoch % 1 == 0:  # or save after some epoch, each k-th epoch etc.
             self.model.save(MODEL_FOLDER + 'model_' + str(epoch + offset) + ".h5")
 
 
 def show_predict(model, input_img, epoch=0):
-    p = model.predict(np.expand_dims(input_img, 0))
-    print(p[0])
-    print(p[0].shape)
-    image = show_image_array(p[0])
+    p = model.predict(np.expand_dims(input_img, 0))[0] - 128
+    print(p)
+    print(p.shape)
+    # image = show_image_array(global_train_y[0], CIELAB=True)
+    image = show_image_array(p, CIELAB=True)
+    image.save(MODEL_FOLDER + str(epoch) + "mask.jpg")
+
+    plab = np.squeeze(color.rgb2lab(color.gray2rgb(input_img)))
+    p_combined_light = p
+    print(p_combined_light.shape, plab.shape)
+    p_combined_light[:, :, 0] = plab[:, :, 0]
+
+    image = show_image_array(p_combined_light, CIELAB=True)
     image.save(MODEL_FOLDER + str(epoch) + ".jpg")
 
 
-def main():
-    train_x, train_y = get_train(use_saved_npy=False)
-    print(train_x.shape, train_y.shape)
+def fit_on_inception(train_x, train_y):
+    model = get_model(use_saved=False if LOAD_MODEL_OFFSET is None else True, type="inception")
+    inception_train_x = np.squeeze(color.gray2rgb(train_x), -2)
     global global_train_x
-    global_train_x = train_x
-
-    model = get_model(use_saved=False if LOAD_MODEL_OFFSET is None else True)
-    print(model.summary())
-    show_predict(model, train_x[0])
-    show_image_array(array_to_color_mask(train_y[0]))
-
-    image = PIL.Image.fromarray(np.uint8(np.squeeze(train_x[10], -1)))
-    image.show()
-    image = PIL.Image.fromarray(np.uint8(train_y[10]))
-    image.show()
-    # print(model.summary())
+    global_train_x = inception_train_x
+    print(inception_train_x.shape)
+    show_predict(model, inception_train_x[0])
     saver = CustomSaver()
-    model.fit(x=train_x, y=train_y, validation_split=0.15, batch_size=5, epochs=30, callbacks=[saver])
+    model.fit(x=inception_train_x, y=train_y + 128, validation_split=0.08, batch_size=6, epochs=200, callbacks=[saver])
 
-    # tf.keras.preprocessing.image_dataset_from_directory(
-    #     INPUT_DIRECTORY,
-    #     labels="inferred",
-    #     label_mode="int",
-    #     class_names=None,
-    #     color_mode="rgb",
-    #     batch_size=32,
-    #     image_size=(256, 256),
-    #     shuffle=True,
-    #     seed=None,
-    #     validation_split=None,
-    #     subset=None,
-    #     interpolation="bilinear",
-    #     follow_links=False,
-    # )
+
+def main():
+    train_x, train_y = get_train(use_saved_npy=True)
+    print(train_x.shape, train_y.shape)
+    global global_train_x, global_train_y
+    global_train_x = train_x
+    global_train_y = train_y
+    fit_on_inception(train_x, train_y)
+    # show_image_array(train_y[0])
+    # show_image_array(train_y[0], CIELAB=True)
+    # image = PIL.Image.fromarray(np.uint8(np.squeeze(train_x[10], -1)))
+    # image.show()
+    # image = PIL.Image.fromarray(np.uint8(train_y[10]))
+    # image.show()
 
 
 main()

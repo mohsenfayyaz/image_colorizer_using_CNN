@@ -6,13 +6,15 @@ from defines import HEIGHT, WIDTH
 from skimage import io, color
 
 
-def show_image_array(image_array):
+def show_image_array(image_array, CIELAB = False):
     try:
-        image = PIL.Image.fromarray(np.uint8(image_array))
+        if CIELAB:
+            image = PIL.Image.fromarray(np.uint8(color.lab2rgb(image_array) * 255))
+        else:
+            image = PIL.Image.fromarray(np.uint8(image_array))
     except Exception:
         image = PIL.Image.fromarray(np.uint8(np.squeeze(image_array, -1)))
-    # image.save("mask.jpg")
-    image.show()
+    # image.show()
     return image
 
 
