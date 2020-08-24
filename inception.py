@@ -9,17 +9,17 @@ def inception_model():
         input_shape=(HEIGHT, WIDTH, 3),
     )
     for layer in model.layers:
-        layer.trainable = False
+        layer.trainable = True
 
     x = model.layers[-3].output
     # x = tf.keras.layers.Conv2D(128, (8, 8), padding="same", activation="relu")(x)
     # x = tf.keras.layers.ReLU(max_value=200, negative_slope=0)(x)
     x = tf.keras.layers.Conv2DTranspose(64, (16, 16), strides=(4, 3), padding="valid")(x)
-    x = tf.keras.layers.ReLU(max_value=200, negative_slope=0)(x)
+    x = tf.keras.layers.ReLU(max_value=2, negative_slope=0)(x)
     x = tf.keras.layers.Conv2DTranspose(32, (8, 8), strides=(2, 2), padding="valid")(x)
-    x = tf.keras.layers.ReLU(max_value=200, negative_slope=0)(x)
-    x = tf.keras.layers.Conv2DTranspose(3, (15, 44), strides=(3, 4), padding="valid")(x)
-    x = tf.keras.layers.ReLU(max_value=200, negative_slope=0)(x)
+    x = tf.keras.layers.ReLU(max_value=2, negative_slope=0)(x)
+    x = tf.keras.layers.Conv2DTranspose(2, (15, 44), strides=(3, 4), padding="valid")(x)
+    x = tf.keras.layers.ReLU(max_value=2, negative_slope=0)(x)
     # x = tf.keras.layers.Conv2DTranspose(2, (7, 7), padding="valid")(x)
     # x = tf.keras.layers.Activation(tf.keras.activations.relu)(x)
     model = tf.keras.Model(inputs=model.inputs, outputs=x)
