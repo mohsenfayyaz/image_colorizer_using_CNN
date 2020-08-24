@@ -3,12 +3,30 @@ import PIL
 from PIL import Image
 import numpy as np
 from defines import HEIGHT, WIDTH
+from skimage import io, color
+
+
+def show_image_array(image_array):
+    try:
+        image = PIL.Image.fromarray(np.uint8(image_array))
+    except Exception:
+        image = PIL.Image.fromarray(np.uint8(np.squeeze(image_array, -1)))
+    # image.save("mask.jpg")
+    image.show()
+    return image
 
 
 def to_grayscale(image):
     gs_img = remove_transparency(image).convert('L')
     return gs_img
     # img.save('greyscale.png')
+
+
+def array_to_color_mask(image_array: np.array):
+    # color_mask = image_array / np.expand_dims(np.average(image_array + 1, axis=-1), axis=-1) * 200
+    lab = color.rgb2lab(image_array)
+    print(lab)
+    return lab
 
 
 def img_to_np_array(image):
@@ -43,6 +61,5 @@ def make_grayscale_folder(src_folder, out_folder):
         print(path.split("\\"))
         filename = path.split("\\")[-1]
         to_grayscale(pil).save(out_folder + filename)
-
 
 # make_grayscale_folder("../data/w/", "../data/output/")

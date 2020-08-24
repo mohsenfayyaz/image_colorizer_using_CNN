@@ -2,3 +2,5 @@
 *.npy
 
 __pycache__/
+
+save/
