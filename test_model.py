@@ -45,8 +45,8 @@ def get_model_prediction(model, input_img):
 
 
 def test_main():
-    model = tf.keras.models.load_model("save\\inception3_trainable2\\model_1360.h5")
-    test_model_on_directory(model, "../data/test/", "../data/test/")
+    model = tf.keras.models.load_model("save\\inception3_trainable2\\model_1566.h5")
+    test_model_on_directory(model, "../data/test/test", "../data/test/test")
 
 
 test_main()

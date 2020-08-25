@@ -18,7 +18,10 @@ INPUT_DIRECTORY = "../data/input"
 OUTPUT_DIRECTORY = "../data/output"
 # MODEL_FOLDER = "save\\CONV_TRANSPOSE\\"
 MODEL_FOLDER = "save\\inception3_trainable2\\"
-LOAD_MODEL_OFFSET = None
+LOAD_MODEL_OFFSET = 1535  # set this to None to start a new model
+USE_SAVED_NPY = True
+TRAIN_X_NPY = 'train_x.npy'
+TRAIN_Y_NPY = 'train_y.npy'
 
 
 def cnn_model():
@@ -47,12 +50,12 @@ def get_train(use_saved_npy=True):
     train_x = None
     train_y = None
     if use_saved_npy:
-        train_x = np.load('train_x.npy')
-        train_y = np.load('train_y.npy')
+        train_x = np.load(TRAIN_X_NPY)
+        train_y = np.load(TRAIN_Y_NPY)
     else:
-        train_x, train_y = DataGenerator(INPUT_DIRECTORY, OUTPUT_DIRECTORY).get_train()
-        np.save('train_x.npy', train_x)
-        np.save('train_y.npy', train_y)
+        train_x, train_y = DataGenerator().get_train(INPUT_DIRECTORY, OUTPUT_DIRECTORY)
+        np.save(TRAIN_X_NPY, train_x)
+        np.save(TRAIN_Y_NPY, train_y)
     return train_x, train_y
 
 
@@ -108,11 +111,12 @@ def fit_on_inception(train_x, train_y):
     print(inception_train_x.shape)
     show_predict(model, inception_train_x[0])
     saver = CustomSaver()
-    model.fit(x=inception_train_x, y=(train_y[:, :, :, 1:] + 100) / 200, validation_split=0.07, batch_size=20, epochs=5000, callbacks=[saver])
+    es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=20)
+    model.fit(x=inception_train_x, y=(train_y[:, :, :, 1:] + 100) / 200, validation_split=0.1, batch_size=20, epochs=5000, callbacks=[saver, es])
 
 
 def main():
-    train_x, train_y = get_train(use_saved_npy=True)
+    train_x, train_y = get_train(use_saved_npy=USE_SAVED_NPY)
     print(train_x.shape, train_y.shape)
     global global_train_x, global_train_y
     global_train_x = train_x

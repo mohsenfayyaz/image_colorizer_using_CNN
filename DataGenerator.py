@@ -22,28 +22,31 @@ class DataGenerator:
         else:
             train_x = [np.array(to_grayscale(PIL.Image.open(str(image_url)))) for image_url in input_images_url]
         print("#Images:", len(input_images_url))
+        print("train_x ready")
         return train_x
 
-    def get_train(self, input_directory, output_directory):
+    def prepare_y(self, output_directory):
         data_dir = pathlib.Path(output_directory)
         output_images_url = list(data_dir.glob('*'))
-        t = time.time()
-        train_x = self.prepare_x(input_directory)
-        # train_x = np.array([np.array(PIL.Image.open(image_url)) for image_url in input_images_url])
-        print("train_x ready")
-        train_y = np.asarray(
-            [img_to_np_array(resize(PIL.Image.open(str(image_url)))) for image_url in output_images_url])
-        train_y = color.rgb2lab(train_y)
+        train_y = np.asarray([np.array(resize(PIL.Image.open(str(image_url)))) for image_url in output_images_url])
+        # for p, u in zip(train_y, output_images_url):
+        #     try:
+        #         if p.shape[2] != 3:
+        #             print(p.shape, u)
+        #     except:
+        #         print(p.shape, u)
+        print(train_y.shape)
+        for i, t in enumerate(train_y):
+            print(output_images_url[i])
+            train_y[i] = color.rgb2lab(train_y[i])
         train_y[:, :, :, 0] = [50]  # ignore the light it can be inferred later
-        # train_x /= 255
-        # train_y /= 255
-        # print("mid train_y")
-        # train_y = np.array([np.array(PIL.Image.open(image_url)) for image_url in output_images_url])
         print("train_y ready")
-        # for image_url in input_images_url:
-        #     current_image = PIL.Image.open(str(image_url))
-        #     train_x.append(img_to_np_array(to_grayscale(current_image)))
-        #     train_y.append(img_to_np_array(current_image))
+        return train_y
+
+    def get_train(self, input_directory, output_directory):
+        t = time.time()
+        train_y = self.prepare_y(output_directory)
+        train_x = self.prepare_x(input_directory)
         elapsed = time.time() - t
         print(elapsed)
         return train_x, train_y

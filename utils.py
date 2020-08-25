@@ -93,4 +93,6 @@ def change_model(model, new_input_shape=(None, 40, 40, 3)):
             print("Could not transfer weights for layer {}".format(layer.name))
 
     return new_model
-# make_grayscale_folder("../data/w/", "../data/output/")
+
+
+# make_grayscale_folder("../data/output2/", "../data/input2/")
