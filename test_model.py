@@ -49,4 +49,4 @@ def test_main():
     test_model_on_directory(model, "../data/test/test", "../data/test/test")
 
 
-test_main()
+# test_main()

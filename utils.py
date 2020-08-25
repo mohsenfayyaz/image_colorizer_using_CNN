@@ -65,16 +65,32 @@ def remove_transparency(im, bg_colour=(255, 255, 255)):
         return im
 
 
-def make_grayscale_folder(src_folder, out_folder):
+def is_colored(pil, url):
+    p = np.array(pil)
+    try:
+        if p.shape[2] != 3:
+            print(p.shape, url)
+        else:
+            return True
+    except:
+        print(p.shape, url)
+    return False
+
+
+def make_grayscale_folder(src_folder, out_folder, mini_out_folder):
     data_dir = pathlib.Path(src_folder)
     input_images_url = list(data_dir.glob('*'))
     print("#Images:", len(input_images_url))
     for image_url in input_images_url:
         pil = PIL.Image.open(str(image_url))
+        if not is_colored(pil, image_url):
+            continue
         path = pil.filename
         print(path.split("\\"))
         filename = path.split("\\")[-1]
-        to_grayscale(pil).save(out_folder + filename)
+        small_img = resize(pil)
+        to_grayscale(small_img).save(out_folder + filename)
+        small_img.save(mini_out_folder + filename)
 
 
 def change_model(model, new_input_shape=(None, 40, 40, 3)):
@@ -95,4 +111,4 @@ def change_model(model, new_input_shape=(None, 40, 40, 3)):
     return new_model
 
 
-# make_grayscale_folder("../data/output2/", "../data/input2/")
+# make_grayscale_folder("../data/output3_raw/", "../data/input3/", "../data/output3/")

@@ -1,3 +1,4 @@
+import gc
 import pathlib
 
 import numpy as np
@@ -6,7 +7,7 @@ import PIL
 import PIL.Image
 import tensorflow as tf
 from keras_preprocessing.image import ImageDataGenerator
-from DataGenerator import DataGenerator
+from DataGenerator import DataGenerator, DataGeneratorSimple
 from defines import HEIGHT, WIDTH
 from utils import show_image_array, array_to_color_mask
 from skimage import color
@@ -14,14 +15,17 @@ from inception import inception_model, inception_1ch_to_3ch
 
 # import tensorflow_datasets as tfds
 
-INPUT_DIRECTORY = "../data/input"
-OUTPUT_DIRECTORY = "../data/output"
+INPUT_DIRECTORY = "../data/input3"
+OUTPUT_DIRECTORY = "../data/output3"
 # MODEL_FOLDER = "save\\CONV_TRANSPOSE\\"
-MODEL_FOLDER = "save\\inception3_trainable2\\"
-LOAD_MODEL_OFFSET = 1535  # set this to None to start a new model
+MODEL_FOLDER = "save\\inception3_trainable3\\"
+LOAD_MODEL_OFFSET = 1593  # set this to None to start a new model
 USE_SAVED_NPY = True
 TRAIN_X_NPY = 'train_x.npy'
 TRAIN_Y_NPY = 'train_y.npy'
+START_IMAGE_INDEX = 0  # if you have larger RAM you can increase the range
+END_IMAGE_INDEX = 5000  # max is 10555 in my dataset
+SAVING_MODEL_EPOCH_INTERVAL = 5
 
 
 def cnn_model():
@@ -50,10 +54,15 @@ def get_train(use_saved_npy=True):
     train_x = None
     train_y = None
     if use_saved_npy:
-        train_x = np.load(TRAIN_X_NPY)
-        train_y = np.load(TRAIN_Y_NPY)
+        train_x = inception_1ch_to_3ch(np.load(TRAIN_X_NPY)[START_IMAGE_INDEX:END_IMAGE_INDEX, :, :, :])
+        print("train_x loaded")
+        gc.collect()
+        train_y = (np.load(TRAIN_Y_NPY)[START_IMAGE_INDEX:END_IMAGE_INDEX, :, :, 1:] + 100) / 200
+        print(train_y.nbytes/1000000)
+        gc.collect()
+        print("train_y loaded")
     else:
-        train_x, train_y = DataGenerator().get_train(INPUT_DIRECTORY, OUTPUT_DIRECTORY)
+        train_x, train_y = DataGeneratorSimple().get_train(INPUT_DIRECTORY, OUTPUT_DIRECTORY)
         np.save(TRAIN_X_NPY, train_x)
         np.save(TRAIN_Y_NPY, train_y)
     return train_x, train_y
@@ -69,16 +78,16 @@ def get_model(use_saved=True, type="inception"):
             return cnn_model()
 
 
-global_train_x = None
-global_train_y = None
+global_train_x = []
+global_train_y = []
 
 
 class CustomSaver(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
-        if epoch % 10 == 0:  # or save after some epoch, each k-th epoch etc.
+        if epoch % SAVING_MODEL_EPOCH_INTERVAL == 0:  # or save after some epoch, each k-th epoch etc.
             offset = 0 if LOAD_MODEL_OFFSET is None else LOAD_MODEL_OFFSET + 1
-            show_predict(self.model, global_train_x[285], epoch + offset)
-            show_predict(self.model, global_train_x[414], epoch + offset + 0.1)
+            show_predict(self.model, global_train_x[20], epoch + offset)
+            show_predict(self.model, global_train_x[800], epoch + offset + 0.1)
             self.model.save(MODEL_FOLDER + 'model_' + str(epoch + offset) + ".h5")
 
 
@@ -105,14 +114,17 @@ def show_predict(model, input_img, epoch=0):
 
 def fit_on_inception(train_x, train_y):
     model = get_model(use_saved=False if LOAD_MODEL_OFFSET is None else True, type="inception")
-    inception_train_x = inception_1ch_to_3ch(train_x)
-    global global_train_x
-    global_train_x = inception_train_x
-    print(inception_train_x.shape)
+
+    inception_train_x = train_x
+    # del train_x
+    global global_train_x_examples
+    global_train_x_examples = [inception_train_x[0], inception_train_x[100]]
+    print("inception_train_x.shape:", inception_train_x.shape)
     show_predict(model, inception_train_x[0])
+
     saver = CustomSaver()
-    es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=20)
-    model.fit(x=inception_train_x, y=(train_y[:, :, :, 1:] + 100) / 200, validation_split=0.1, batch_size=20, epochs=5000, callbacks=[saver, es])
+    es = tf.keras.callbacks.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=50)
+    model.fit(x=inception_train_x, y=train_y, validation_split=0.1, batch_size=20, epochs=5000, callbacks=[saver, es])
 
 
 def main():
