@@ -17,7 +17,7 @@ from inception import inception_model
 INPUT_DIRECTORY = "../data/input"
 OUTPUT_DIRECTORY = "../data/w"
 # MODEL_FOLDER = "save\\CONV_TRANSPOSE\\"
-MODEL_FOLDER = "save\\inception3_trainable\\"
+MODEL_FOLDER = "save\\inception3_trainable2\\"
 LOAD_MODEL_OFFSET = None
 
 
@@ -37,7 +37,7 @@ def cnn_model():
     model.add(tf.keras.layers.Activation(tf.keras.activations.relu))
     model.add(tf.keras.layers.Conv2DTranspose(2, (4, 4), padding="valid"))
     model.add(tf.keras.layers.Activation(tf.keras.activations.relu))
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.005), loss=tf.keras.losses.mean_squared_error,
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss=tf.keras.losses.mean_squared_error,
                   metrics=["accuracy"])
     print(model.summary())
     return model
@@ -72,21 +72,22 @@ global_train_y = None
 
 class CustomSaver(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
-        offset = 0 if LOAD_MODEL_OFFSET is None else LOAD_MODEL_OFFSET + 1
-        show_predict(self.model, global_train_x[64], epoch + offset)
-        show_predict(self.model, global_train_x[50], epoch + offset + 0.1)
-        if epoch % 2 == 0:  # or save after some epoch, each k-th epoch etc.
+        if epoch % 10 == 0:  # or save after some epoch, each k-th epoch etc.
+            offset = 0 if LOAD_MODEL_OFFSET is None else LOAD_MODEL_OFFSET + 1
+            show_predict(self.model, global_train_x[285], epoch + offset)
+            show_predict(self.model, global_train_x[414], epoch + offset + 0.1)
             self.model.save(MODEL_FOLDER + 'model_' + str(epoch + offset) + ".h5")
 
 
 def show_predict(model, input_img, epoch=0):
-    pred_ch2 = model.predict(np.expand_dims(input_img, 0))[0] * 100 - 128
+    pred_ch2 = model.predict(np.expand_dims(input_img, 0))[0] * 200 - 100
     print(pred_ch2)
     print(pred_ch2.shape)
     pred_ch3 = np.zeros((HEIGHT, WIDTH, 3)) + 50
     pred_ch3[:, :, 1] = pred_ch2[:, :, 0]
     pred_ch3[:, :, 2] = pred_ch2[:, :, 1]
-    # image = show_image_array(global_train_y[0], CIELAB=True)
+    # image = show_image_array(global_train_y[64], CIELAB=True)
+    # image.save(MODEL_FOLDER + str(epoch) + "base.jpg")
     image = show_image_array(pred_ch3, CIELAB=True)
     image.save(MODEL_FOLDER + str(epoch) + "mask.jpg")
 
@@ -107,7 +108,7 @@ def fit_on_inception(train_x, train_y):
     print(inception_train_x.shape)
     show_predict(model, inception_train_x[0])
     saver = CustomSaver()
-    model.fit(x=inception_train_x, y=(train_y[:, :, :, 1:] + 128) / 100, validation_split=0.05, batch_size=6, epochs=800, callbacks=[saver])
+    model.fit(x=inception_train_x, y=(train_y[:, :, :, 1:] + 100) / 200, validation_split=0.07, batch_size=20, epochs=5000, callbacks=[saver])
 
 
 def main():
