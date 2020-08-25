@@ -4,9 +4,10 @@ from PIL import Image
 import numpy as np
 from defines import HEIGHT, WIDTH
 from skimage import io, color
+import tensorflow as tf
 
 
-def show_image_array(image_array, CIELAB = False):
+def show_image_array(image_array, CIELAB=False):
     try:
         if CIELAB:
             image = PIL.Image.fromarray(np.uint8(color.lab2rgb(image_array) * 255))
@@ -15,6 +16,17 @@ def show_image_array(image_array, CIELAB = False):
     except Exception:
         image = PIL.Image.fromarray(np.uint8(np.squeeze(image_array, -1)))
     # image.show()
+    return image
+
+
+def array_to_image(image_array, CIELAB=False):
+    try:
+        if CIELAB:
+            image = PIL.Image.fromarray(np.uint8(color.lab2rgb(image_array) * 255))
+        else:
+            image = PIL.Image.fromarray(np.uint8(image_array))
+    except Exception:
+        image = PIL.Image.fromarray(np.uint8(np.squeeze(image_array, -1)))
     return image
 
 
@@ -64,4 +76,21 @@ def make_grayscale_folder(src_folder, out_folder):
         filename = path.split("\\")[-1]
         to_grayscale(pil).save(out_folder + filename)
 
+
+def change_model(model, new_input_shape=(None, 40, 40, 3)):
+    # replace input shape of first layer
+    model._layers[0].batch_input_shape = new_input_shape
+
+    # rebuild model architecture by exporting and importing via json
+    new_model = tf.keras.models.model_from_json(model.to_json())
+
+    # copy weights from old model to new one
+    for layer in new_model.layers:
+        try:
+            layer.set_weights(model.get_layer(name=layer.name).get_weights())
+            print("Loaded layer {}".format(layer.name))
+        except:
+            print("Could not transfer weights for layer {}".format(layer.name))
+
+    return new_model
 # make_grayscale_folder("../data/w/", "../data/output/")

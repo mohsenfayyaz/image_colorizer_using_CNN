@@ -9,19 +9,26 @@ from skimage import color
 
 
 class DataGenerator:
-    def __init__(self, input_directory, output_directory):
-        self.input_directory = input_directory
-        self.output_directory = output_directory
+    def __init__(self):
+        pass
 
-    def get_train(self, ):
-        data_dir = pathlib.Path(self.input_directory)
+    def prepare_x(self, input_directory, do_resize=True):
+        data_dir = pathlib.Path(input_directory)
         input_images_url = list(data_dir.glob('*'))
-        data_dir = pathlib.Path(self.output_directory)
-        output_images_url = list(data_dir.glob('*'))
+        if do_resize:
+            train_x = np.asarray([np.array(to_grayscale(resize(PIL.Image.open(str(image_url))))) for image_url in input_images_url])
+            print(train_x.shape)
+            train_x = np.expand_dims(train_x, -1)
+        else:
+            train_x = [np.array(to_grayscale(PIL.Image.open(str(image_url)))) for image_url in input_images_url]
         print("#Images:", len(input_images_url))
+        return train_x
+
+    def get_train(self, input_directory, output_directory):
+        data_dir = pathlib.Path(output_directory)
+        output_images_url = list(data_dir.glob('*'))
         t = time.time()
-        train_x = np.asarray(
-            [img_to_np_array(resize(PIL.Image.open(str(image_url)))) for image_url in input_images_url])
+        train_x = self.prepare_x(input_directory)
         # train_x = np.array([np.array(PIL.Image.open(image_url)) for image_url in input_images_url])
         print("train_x ready")
         train_y = np.asarray(
@@ -33,7 +40,6 @@ class DataGenerator:
         # print("mid train_y")
         # train_y = np.array([np.array(PIL.Image.open(image_url)) for image_url in output_images_url])
         print("train_y ready")
-        train_x = np.expand_dims(train_x, -1)
         # for image_url in input_images_url:
         #     current_image = PIL.Image.open(str(image_url))
         #     train_x.append(img_to_np_array(to_grayscale(current_image)))

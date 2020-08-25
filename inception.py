@@ -1,6 +1,9 @@
 import tensorflow as tf
+from skimage import color
+
 from defines import WIDTH, HEIGHT
 import numpy as np
+
 
 def inception_model():
     model = tf.keras.applications.InceptionV3(
@@ -35,6 +38,10 @@ def inception_model():
                   metrics=["accuracy"])
     print(model.summary())
     return model
+
+
+def inception_1ch_to_3ch(grayscale_train_x):
+    return np.squeeze(color.gray2rgb(grayscale_train_x), -2)
 
 
 inception_model()

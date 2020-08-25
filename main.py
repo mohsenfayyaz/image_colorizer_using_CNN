@@ -10,12 +10,12 @@ from DataGenerator import DataGenerator
 from defines import HEIGHT, WIDTH
 from utils import show_image_array, array_to_color_mask
 from skimage import color
-from inception import inception_model
+from inception import inception_model, inception_1ch_to_3ch
 
 # import tensorflow_datasets as tfds
 
 INPUT_DIRECTORY = "../data/input"
-OUTPUT_DIRECTORY = "../data/w"
+OUTPUT_DIRECTORY = "../data/output"
 # MODEL_FOLDER = "save\\CONV_TRANSPOSE\\"
 MODEL_FOLDER = "save\\inception3_trainable2\\"
 LOAD_MODEL_OFFSET = None
@@ -102,7 +102,7 @@ def show_predict(model, input_img, epoch=0):
 
 def fit_on_inception(train_x, train_y):
     model = get_model(use_saved=False if LOAD_MODEL_OFFSET is None else True, type="inception")
-    inception_train_x = np.squeeze(color.gray2rgb(train_x), -2)
+    inception_train_x = inception_1ch_to_3ch(train_x)
     global global_train_x
     global_train_x = inception_train_x
     print(inception_train_x.shape)
